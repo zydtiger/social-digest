@@ -1,0 +1,41 @@
+# Personal settings live in ~/.config/social-digest/config.toml.
+run_dir = "~/.local/state/social-digest/runs"
+topic = "Concrete AI product releases, infrastructure developments, and useful software demand"
+min_score = 6
+max_enrich = 3
+comments = false
+max_cards = 12
+max_payload_tokens = 6000
+
+[model]
+base_url = "http://LOCAL_MODEL_HOST:PORT/v1"
+model = "LOCAL_MODEL_NAME"
+concurrency = 4
+max_input_bytes = 24000
+max_output_tokens = 1200
+timeout_seconds = 180
+
+[twitter]
+enabled = true
+queries = ["AI product release"]
+watchlist = [] # Account names, without @; each adds a bounded from: query.
+max_pages = 1
+sort = "Latest"
+
+[xhs]
+enabled = true
+queries = ["AI 工具"]
+max_pages = 1
+sort = "time_descending"
+
+[budget]
+max_requests = 10
+max_cost_usd = 0.15
+# Conservative reservation for variable-sized Twitter result pages.
+twitter_page_reserve = 100
+
+[agent]
+# Optional executable argv. It reads stdin and returns Markdown on stdout.
+command = []
+language = "English"
+timeout_seconds = 600
