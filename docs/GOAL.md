@@ -10,6 +10,7 @@ evidence, and cluster reports before final synthesis.
 - Resume reuses saved responses and completed stages without duplicate billing.
 - Evidence cards retain source links, exact excerpts, and source offsets.
 - Daily collection can feed manual weekly synthesis.
+- Weekly notes export to a configured Obsidian vault with parent backlinks.
 - Standalone setup works without another configuration repository.
 
 ## Non-goals

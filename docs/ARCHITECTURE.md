@@ -1,11 +1,14 @@
 # Architecture
 
-The flow is `collect → score → enrich → evidence → cards → synthesize`. Each
+The flow is `collect → score → enrich → evidence → cards → synthesize → write`. Each
 stage has an atomic JSON checkpoint and list-shaped stages also write JSONL.
 Local-model tasks cache individually, so interruption does not repeat finished
 items. A nonblocking file lock prevents two writers for the same window.
 Imported collection contents participate in the run signature; a changed source
 collection cannot silently reuse an earlier weekly run's checkpoints.
+Configured filesystem paths are outside the paid computation signature. Saved
+manifests with a top-level run directory normalize to the same computation
+identity as the `[paths]` layout.
 
 ## Cost boundary
 
@@ -45,6 +48,21 @@ environment and stdin payload. Provider credentials never enter its environment.
 The command is expected to run without tools; the CLI does not enforce a sandbox.
 An attempt marker precedes process launch; ambiguous or failed attempts need an
 explicit retry flag. A durable digest makes subsequent synthesis a no-op.
+
+## Note boundary
+
+The write stage renders the cached digest with weekly frontmatter and a source
+table, then adds its wikilink to the configured existing parent. The run records
+its reserved note and parent in `write.json` before creating the note. Exclusive
+creation prevents another run's note from being overwritten; a filename collision
+gets a numbered sibling. A partial parent-write failure resumes with the same
+note, retaining any user edits, without invoking providers or the agent again.
+The checkpoint completes only after the parent contains the backlink.
+
+Completed writes are reused without rewriting the note or parent. Once a write
+attempt reserves its targets, changed output paths are rejected rather than
+relocating notes or leaving the original parent behind. Output paths can change
+before the first write while retaining all paid-stage checkpoints.
 
 ## Provider contracts
 

@@ -2,15 +2,27 @@
 
 import fcntl
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
 from pathlib import Path
 
 from .agent import prompt, synthesize
 from .config import Config
 from .model import LocalModel
+from .note import write_note
 from .providers import Providers, collect, enrich
 from .store import BudgetExceeded, Ledger, fingerprint, jsonl, read, write
 
-STAGES = ("collect", "score", "enrich", "evidence", "cards", "synthesize")
+STAGES = ("collect", "score", "enrich", "evidence", "cards", "synthesize", "write")
+
+
+def computation_settings(settings: dict) -> dict:
+    """Normalize current and saved settings to the paid computation's identity."""
+    settings = dict(settings)
+    settings.pop("paths", None)
+    settings.pop("run_dir", None)
+    settings.pop("budget", None)
+    settings["agent"] = {"language": settings["agent"]["language"]}
+    return settings
 
 
 def execute(
@@ -23,7 +35,7 @@ def execute(
     input_runs: tuple[Path, ...] = (),
     retry_agent: bool = False,
 ) -> dict:
-    directory = config.run_dir / f"{since}_{until}"
+    directory = config.paths.run_dir / f"{since}_{until}"
     directory.mkdir(parents=True, exist_ok=True)
     with (directory / ".lock").open("a") as lock:
         try:
@@ -36,13 +48,7 @@ def execute(
 
 
 def _execute(config, directory, since, until, env, stage, dry_run, input_runs, retry_agent):
-    settings = config.model_dump(mode="json")
-    # A user may configure the optional synthesis command after inspecting a dry run.
-    # Its language still affects the bounded prompt; command/timeout do not affect data.
-    settings["agent"] = {"language": config.agent.language}
-    # Explicitly raising a cap permits an interrupted collection to continue from
-    # cached responses. Data-selection settings remain immutable for this window.
-    settings.pop("budget")
+    settings = computation_settings(config.model_dump(mode="json"))
     imported = []
     for source in input_runs:
         path = source / "collect.json"
@@ -59,14 +65,19 @@ def _execute(config, directory, since, until, env, stage, dry_run, input_runs, r
     }
     signature = fingerprint(identity)
     existing = read(directory / "run.json")
-    if existing and existing["signature"] != signature:
-        raise ValueError("run configuration differs; use a different run_dir or original config")
+    if existing:
+        saved = {key: existing[key] for key in ("config", "since", "until", "inputs")}
+        saved["config"] = computation_settings(saved["config"])
+        if fingerprint(saved) != signature:
+            raise ValueError(
+                "run configuration differs; use a different run_dir or original config"
+            )
     if not existing:
         write(directory / "run.json", {"signature": signature, **identity})
     ledger = Ledger(directory, config.budget.max_requests, config.budget.max_cost_usd)
     api = Providers(config, ledger, env)
     model = LocalModel(config, directory)
-    stop = "cards" if dry_run else (stage or "synthesize")
+    stop = "cards" if dry_run else (stage or "write")
     if dry_run and stage and STAGES.index(stage) < STAGES.index("cards"):
         stop = stage
     coverage = read(directory / "coverage.json", [])
@@ -182,10 +193,18 @@ def _execute(config, directory, since, until, env, stage, dry_run, input_runs, r
         return payload
 
     payload = cached("cards", cards)
-    if stop == "synthesize":
+    if stop in ("synthesize", "write"):
         if not payload["cards"]:
             raise ValueError("no verified evidence cards; refusing empty paid synthesis")
-        synthesize(config, directory, payload, retry_agent)
+        digest = synthesize(config, directory, payload, retry_agent)
+        if stop == "write":
+            write_note(
+                directory,
+                config.paths,
+                date.fromisoformat(until),
+                digest.read_text(),
+                payload["cards"],
+            )
     return summary(directory, stop, ledger, payload["cards"])
 
 
@@ -197,4 +216,5 @@ def summary(directory, stage, ledger, items):
         **ledger.summary(),
         "digest": str(directory / "digest.md") if (directory / "digest.md").exists() else None,
         "payload_budget": read(directory / "payload-budget.json"),
+        "note": read(directory / "write.json", {}).get("note"),
     }

@@ -47,8 +47,23 @@ class Agent(Settings):
     timeout_seconds: int = Field(default=600, ge=1, le=1800)
 
 
-class Config(Settings):
+class Paths(Settings):
     run_dir: Path
+    note_dir: Path
+    parent_note: Path
+
+    @model_validator(mode="after")
+    def expand_paths(self):
+        for name in ("run_dir", "note_dir", "parent_note"):
+            path = getattr(self, name).expanduser()
+            if not path.is_absolute():
+                raise ValueError(f"paths.{name} must be absolute")
+            setattr(self, name, path)
+        return self
+
+
+class Config(Settings):
+    paths: Paths
     model: Model
     topic: str = Field(min_length=1, max_length=2000)
     twitter: Source = Field(default_factory=lambda: Source(enabled=False))
@@ -102,10 +117,7 @@ def load_env(path: Path, env: dict[str, str]) -> None:
 def load_config(path: Path) -> Config:
     with path.open("rb") as handle:
         config = Config.model_validate(tomllib.load(handle))
-    config.run_dir = config.run_dir.expanduser()
-    if not config.run_dir.is_absolute():
-        raise ValueError("run_dir must be absolute")
     return config
 
 
-Stage = Literal["collect", "score", "enrich", "evidence", "cards", "synthesize"]
+Stage = Literal["collect", "score", "enrich", "evidence", "cards", "synthesize", "write"]

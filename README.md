@@ -2,7 +2,7 @@
 
 A standalone CLI that collects X/Twitter and Xiaohongshu, uses a local model for
 relevance and traceable evidence, and passes a compact payload to an optional
-agent for final Markdown synthesis.
+agent for final Markdown synthesis, then writes a weekly Obsidian note.
 
 ## Setup
 
@@ -19,6 +19,15 @@ cp config.example.toml ~/.config/social-digest/config.toml
 Set `model.base_url`, `model.model`, topic, source queries, and budgets. The
 default config directory follows an absolute `XDG_CONFIG_HOME`. `--config PATH`
 selects another config. There are no built-in personal endpoints or model names.
+
+Configure all three `[paths]` settings: `run_dir` for resumable artifacts,
+`note_dir` for weekly Social Digest notes, and `parent_note` for their existing
+parent note in the same vault. Paths accept `~` and must expand to absolute paths.
+The parent must exist before export; the CLI creates `note_dir` when needed.
+
+For a config with a top-level `run_dir`, move it into `[paths]` and add `note_dir`
+and `parent_note`, as shown in `config.example.toml`. Other settings stay in
+their existing tables. Saved runs keep their cached collection and synthesis.
 
 Put credentials in a private `env` file beside the config. The loader reads plain
 `KEY=VALUE` lines, without shell expansion or quote processing. Existing process
@@ -46,17 +55,30 @@ uv run social-digest run --since 2026-10-27 --until 2026-11-03 --dry-run
 
 `--until` is exclusive, in UTC. By default the CLI covers the preceding complete
 UTC day. A run directory is identified by its window. `--stage` executes through
-that stage: `collect`, `score`, `enrich`, `evidence`, `cards`, or `synthesize`.
+that stage: `collect`, `score`, `enrich`, `evidence`, `cards`, `synthesize`, or `write`.
+The default runs through `write`; `--stage synthesize` saves only the run's
+`digest.md`. `--stage write` exports that cached digest and runs any missing
+earlier stages.
 `--dry-run` stops at cards, or at an earlier explicit stage, before the paid agent.
 It can still spend provider credits and call the local model.
 
 Repeat the same command to resume. Completed requests and stages are reused.
 Changing data-selection config or import inputs for the same window is rejected;
-use another `run_dir` for a separate experiment. Budget caps and the optional
-agent command can be changed without invalidating saved data. The CLI never
+use another `paths.run_dir` for a separate experiment. Budget caps, output paths,
+and the optional agent command do not invalidate paid computation. The CLI never
 retries provider requests.
 A request with uncertain delivery stops resume to prevent duplicate billing.
 An agent attempt without a digest requires explicit `--retry-agent` to try again.
+
+The exported note is named `YYYY-Www Social Digest.md`, using the ISO week of the
+last covered day. It has `up`, `tags`, `week`, and `reported` frontmatter, the
+digest body, and a source/evidence table. A wikilink is added to the parent once.
+An existing unrelated note gets a numbered sibling instead of being overwritten.
+The run records its own output in `write.json`; completed resume preserves note
+and parent edits. Once a write attempt has reserved a destination, changing its
+output paths is an error. Before the first write, paths can change while reusing
+the cached digest. Fixing a missing parent and rerunning `--stage write` does not
+recall the paid agent.
 
 Manual daily collection and weekly synthesis can share saved collections:
 
@@ -76,7 +98,8 @@ are not an exhaustive historical search.
 
 The run directory contains raw responses, normalized JSONL, model checkpoints,
 verified excerpts with source offsets, event groups, `cards.json`, a paid-request
-ledger, and optional `digest.md`. The final JSON line reports paths and reserved
+ledger, `digest.md`, and the note's `write.json` checkpoint. The final JSON line
+reports both `digest` and exported `note` paths, plus reserved
 provider cost. Reservations use $0.00015 per Twitter tweet, with a conservative
 configurable page allowance, and $0.01 per TikHub request. Failed or uncertain
 requests retain their reservation. Final-agent costs are governed by the chosen

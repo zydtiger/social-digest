@@ -17,7 +17,11 @@ from social_digest.store import BudgetExceeded, Ledger, UncertainRequest, read
 def config(tmp_path):
     return Config.model_validate(
         {
-            "run_dir": str(tmp_path / "runs"),
+            "paths": {
+                "run_dir": str(tmp_path / "runs"),
+                "note_dir": str(tmp_path / "vault/Calendar/Social Digests"),
+                "parent_note": str(tmp_path / "vault/Atlas/Calendar.md"),
+            },
             "topic": "useful software",
             "model": {"base_url": "http://localhost:1234/v1", "model": "test-model"},
             "twitter": {"enabled": True, "queries": ["software"], "max_pages": 2},
@@ -356,7 +360,7 @@ def test_upstream_http_200_error():
 def test_lock(config, monkeypatch):
     import fcntl
 
-    directory = config.run_dir / "2026-11-02_2026-11-03"
+    directory = config.paths.run_dir / "2026-11-02_2026-11-03"
     directory.mkdir(parents=True)
     with (directory / ".lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

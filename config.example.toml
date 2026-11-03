@@ -1,11 +1,15 @@
 # Personal settings live in ~/.config/social-digest/config.toml.
-run_dir = "~/.local/state/social-digest/runs"
 topic = "Concrete AI product releases, infrastructure developments, and useful software demand"
 min_score = 6
 max_enrich = 3
 comments = false
 max_cards = 12
 max_payload_tokens = 6000
+
+[paths]
+run_dir = "~/.local/state/social-digest/runs"
+note_dir = "/ABSOLUTE/PATH/TO/VAULT/Calendar/Social Digests"
+parent_note = "/ABSOLUTE/PATH/TO/VAULT/Atlas/Calendar.md"
 
 [model]
 base_url = "http://LOCAL_MODEL_HOST:PORT/v1"
