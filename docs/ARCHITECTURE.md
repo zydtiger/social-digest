@@ -64,6 +64,15 @@ attempt reserves its targets, changed output paths are rejected rather than
 relocating notes or leaving the original parent behind. Output paths can change
 before the first write while retaining all paid-stage checkpoints.
 
+## CLI automation
+
+The CLI's `--weekly` option selects the previous seven complete UTC days;
+explicit dates remain available and cannot be combined with that option.
+The resulting window uses the ordinary run identity and resume checkpoints.
+The final output keeps the absolute note path and adds scheduler notification
+metadata, deriving the vault from the nearest `.obsidian/` ancestor of the
+existing output note. Standalone Markdown output has no notification metadata.
+
 ## Provider contracts
 
 - [TwitterAPI.io search](https://docs.twitterapi.io/api-reference/endpoint/tweet_advanced_search)

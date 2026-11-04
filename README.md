@@ -50,12 +50,16 @@ uv run social-digest config check
 uv run social-digest run --stage collect
 uv run social-digest run --dry-run
 uv run social-digest run
+uv run social-digest run --weekly
 uv run social-digest run --since 2026-10-27 --until 2026-11-03 --dry-run
 ```
 
 `--until` is exclusive, in UTC. By default the CLI covers the preceding complete
-UTC day. A run directory is identified by its window. `--stage` executes through
-that stage: `collect`, `score`, `enrich`, `evidence`, `cards`, `synthesize`, or `write`.
+UTC day. A run directory is identified by its window.
+`--weekly` covers the previous seven complete UTC days and cannot be combined
+with `--since` or `--until`.
+`--stage` executes through that stage: `collect`, `score`, `enrich`, `evidence`,
+`cards`, `synthesize`, or `write`.
 The default runs through `write`; `--stage synthesize` saves only the run's
 `digest.md`. `--stage write` exports that cached digest and runs any missing
 earlier stages.
@@ -105,6 +109,12 @@ configurable page allowance, and $0.01 per TikHub request. Failed or uncertain
 requests retain their reservation. Final-agent costs are governed by the chosen
 agent command; it is invoked only once after cards are complete.
 An empty verified-card set stops before paid synthesis.
+
+The final JSON preserves the absolute `note` path and adds `notification` with
+`vault`, vault-relative `note`, and `summary` fields for schedulers. The nearest
+ancestor directory containing `.obsidian/` identifies the vault. `notification`
+is null when no existing note belongs to an identifiable vault. For example,
+`jq -sc 'last.notification // {}'` extracts the notification object from CLI output.
 
 Raw source artifacts and local model checkpoints remain on disk for resume.
 `max_payload_tokens` conservatively bounds final prompt UTF-8 bytes, including
