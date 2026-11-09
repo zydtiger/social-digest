@@ -172,6 +172,33 @@ def test_xhs_nested_detail(config):
     assert value["text"] == "Full\ncomplete text"
 
 
+def test_xhs_video_detail(config):
+    class API:
+        def get(self, provider, endpoint, params):
+            assert endpoint == "/get_video_note_detail"
+            return {
+                "data": {
+                    "data": [
+                        {"id": "abc", "type": "video", "title": "Full", "desc": "video text"},
+                        {"id": "other", "type": "video", "title": "Feed", "desc": "unrelated"},
+                    ]
+                }
+            }, "detail.json"
+
+    value = enrich(
+        API(),
+        {
+            "provider": "xhs",
+            "source_id": "abc",
+            "kind": "video",
+            "text": "Short",
+            "raw": ["search.json"],
+        },
+        False,
+    )
+    assert value["text"] == "Full\nvideo text"
+
+
 def test_env_permissions_precedence_and_no_shell(tmp_path):
     path = tmp_path / "env"
     path.write_text("TIKHUB_API_KEY=$(never-run)\nTWITTERAPI_API_KEY=from-file\n")

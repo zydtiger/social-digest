@@ -238,7 +238,8 @@ def enrich(api: Providers, item: dict, comments: bool) -> dict:
         values = body["data"]["data"]
         if not isinstance(values, list) or not values:
             raise ProviderError("TikHub detail response has no note list")
-        notes = values[0].get("note_list", [])
+        # Image detail wraps notes in note_list; video detail returns the notes directly.
+        notes = values if item["kind"] == "video" else values[0].get("note_list", [])
         matches = [note for note in notes if str(note.get("id")) == item["source_id"]]
         if not matches:
             raise ProviderError("TikHub detail did not return the requested note")
