@@ -15,13 +15,24 @@
 - The base branch is `main`. Small isolated edits may remain there; substantial
   work uses a semantic `<prefix>/<lowercase-hyphenated-topic>` sibling worktree.
 - Do not commit, push, merge, tag, add remotes, or publish without explicit
-  authorization. There is no versioned release workflow.
+  authorization.
 - Commit subjects use `prefix: imperative summary` or
   `prefix(scope): imperative summary`, with no trailing period. Allowed prefixes:
   `feat` functionality, `fix` correctness, `docs` documentation, `refactor`
   organization, `test` tests, `build` dependencies, `chore` maintenance,
   `revert` reversals. Scopes contain lowercase letters, digits, or hyphens.
 - Preserve unrelated working-tree changes and stage only intended files.
+
+## Releases
+
+Versions are `0.x` under active development: breaking changes are expected
+between releases. A release is an annotated `vX.Y.Z` tag matching the
+`pyproject.toml` version, with a GitHub Release whose notes summarize the
+changes. Nothing is published to PyPI. To release from a clean `main`
+synchronized with `origin/main`: bump the version in `pyproject.toml`, run
+`uv lock`, commit both files, run both hook stages, tag that commit, push the
+tag, and publish the GitHub Release from it. Never move a published tag. Each
+release needs its own explicit authorization.
 
 ## Validation
 
